@@ -1,0 +1,22 @@
+1. OrderOptimizer node is created as per the instructions given in the document.
+
+Flow of the code:
+All the files in the folder "orders" is searched for the given order ->
+once the order is found, all the products of the order are parsed ->
+for each product, all the parts in "configuration" file are parsed ->
+After gettinig all the data, shortest path is calculated ->
+All the parts and AMR are represented in map using markers.
+
+2. unit_test_node (unit_test.cpp) is created as a unit test to print entire flow of the program.
+
+Commands to test OrderOptimizer node
+1. "ros2 run amr_example OrderOptimizer --ros-args -p absolute_path:=<give absolute location of the folder containing orders and configuration folders>." - to run main node.
+2. "ros2 run amr_example publish_order" - this publishes order id and description in respective topics to test.
+3. "ros2 run tf2_ros static_transform_publisher 1 0 0 0 0 0 map frame" - static tf2 transform for publishing markers.
+4. "ros2 run rviz2 rviz2" - to launch rviz display.
+
+Commands to test unit test node
+ros2 run amr_example unit_test_node --ros-args -p absolute_path:=<give absolute location of the folder containing orders and configuration folders>
+
+
+
