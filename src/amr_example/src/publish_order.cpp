@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -13,16 +14,16 @@ custom_msg::msg::OrderDesc order;
 /* This example creates a subclass of Node and uses std::bind() to register a
 * member function as a callback from the timer. */
 
-class test : public rclcpp::Node
+class PublishOrder : public rclcpp::Node
 {
   public:
-    test()
+    PublishOrder()
     : Node("test"), count_(0)
     {
       publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("currentPosition", 1);
       publish_order = this->create_publisher<custom_msg::msg::OrderDesc>("nextOrder",1);
       timer_ = this->create_wall_timer(
-      2000ms, std::bind(&test::timer_callback, this));
+      2000ms, std::bind(&PublishOrder::timer_callback, this));
     }
 
   private:
@@ -46,7 +47,7 @@ class test : public rclcpp::Node
   int main(int argc, char * argv[])
   {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<test>());
+    rclcpp::spin(std::make_shared<PublishOrder>());
     rclcpp::shutdown();
     return 0;
   }

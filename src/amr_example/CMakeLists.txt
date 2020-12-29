@@ -40,12 +40,18 @@ ament_target_dependencies(OrderOptimizer rclcpp geometry_msgs std_msgs custom_ms
 
 target_link_libraries(OrderOptimizer yaml-cpp stdc++fs)
 
-add_executable(test_node src/test.cpp)
-ament_target_dependencies(test_node rclcpp geometry_msgs std_msgs custom_msg)
+add_executable(unit_test_node src/unit_test.cpp)
+ament_target_dependencies(unit_test_node rclcpp geometry_msgs std_msgs custom_msg visualization_msgs)
+
+add_executable(publish_order src/publish_order.cpp)
+ament_target_dependencies(publish_order rclcpp geometry_msgs std_msgs custom_msg)
+
+target_link_libraries(unit_test_node yaml-cpp stdc++fs)
 
 install(TARGETS
   OrderOptimizer
-  test_node
+  unit_test_node
+  publish_order
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

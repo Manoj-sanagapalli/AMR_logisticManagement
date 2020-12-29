@@ -76,9 +76,9 @@ void publish_marker(std::vector<Product> Fetch);
 
 // Main class
 
-class Order_optimizer: public rclcpp::Node
+class Unit_test: public rclcpp::Node
 {
-	public: Order_optimizer(): Node("Order_optimizer"), count_(0)
+	public: Unit_test(): Node("Order_optimizer"), count_(0)
 	{
 		publishe_array = this->create_publisher<visualization_msgs::msg::MarkerArray > ("order_path", 1);
 
@@ -89,25 +89,13 @@ class Order_optimizer: public rclcpp::Node
 			RCLCPP_INFO(this->get_logger(), "parameter donot exists");
 		}
 		this->get_parameter("absolute_path", filepath);
+    std::cout<<"The value of the parameter absolute_path is "<<filepath<<"\n";
 
-        // Subscribing from the topic, getting current position of AMR
-		subscribe_position = this->create_subscription<geometry_msgs::msg::PoseStamped > (
-        "currentPosition",1,
-		[this](geometry_msgs::msg::PoseStamped::SharedPtr get_currentPosition)
-			{
-				current_x = get_currentPosition->pose.position.x;
-				current_y = get_currentPosition->pose.position.y;
-			}
-	);
+    orderId= 1200015;
+    current_x = 17.263115;
+    current_y = 977.0855;
+    order_description = "Description of 1200015";
 
-        // Getting order data
-		subscribe_order = this->create_subscription<custom_msg::msg::OrderDesc > (			
-        "nextOrder", 1,
-		[this](custom_msg::msg::OrderDesc::SharedPtr get_orderId)
-			{
-				orderId = get_orderId->order_id;
-				order_description = get_orderId->description;
-	});
 	}
 
 	// Function to parse the data from files 
@@ -124,6 +112,7 @@ class Order_optimizer: public rclcpp::Node
 		bool orderFound = false;
 		while ((p < file.size()) && !(orderFound))
 		{
+			std::cout <<"Searching the file "<< file[p] <<" for the order "<< orderId<<'\n';
 			//Input the file to istream
 			std::ifstream fin(file[p], std::fstream:: in);
 			// Input the yaml file as Node object
@@ -137,17 +126,28 @@ class Order_optimizer: public rclcpp::Node
                 // check for the required order
 				if (orderNode["order"].as<uint32_t> () == orderId)
 				{
+          std::cout<<"Order found in this file"<< "\n";
 					float Destination_x = orderNode["cx"].as<float> ();
 					float Destination_y = orderNode["cy"].as<float> ();
 					orderFound = true;
+          std::cout<<"The destination coordinates for the order "<<orderId<<" are "<<Destination_x
+          <<" and "<<Destination_y<<"\n";
+          std::cout<<"The products of the order"<<orderId<<"are :"<<"\n";
+          for (size_t k = 0; k < orderNode["products"].size(); ++k)
+          {
+            std::cout<<"  -"<<orderNode["products"][k]<<"\n";
+          }
+          std::cout<<"\n";
 
 					//Iterate through products once order is found
 					for (size_t j = 0; j<orderNode["products"].size(); ++j)
 					{
+            std::cout<<"The parts of the product "<<orderNode["products"][j]<<" are "<<"\n";
 
                         // For every product, iterate through products list to get all parts.
 						getParts(orderNode["products"][j].as<float> ());
 					}
+					std::cout <<"\n"<< "Total number of parts to collect are" << Fetch.size() << '\n';
 
                     // print the fetched data in required format
 					output(Fetch, Destination_x, Destination_y);
@@ -165,7 +165,8 @@ class Order_optimizer: public rclcpp::Node
 	void getParts(float id)
 	{
 		Product product;
-		std::ifstream fin_config(filepath + "/configuration/products.yaml", std::fstream:: in);
+		std::string fromTopic = "/home/manoj/applicants_amr_example_1";
+		std::ifstream fin_config(fromTopic + "/configuration/products.yaml", std::fstream:: in);
 
         // Load products.yaml in to a document node
 		YAML::Node config = YAML::Load(fin_config);
@@ -184,6 +185,7 @@ class Order_optimizer: public rclcpp::Node
 					product.Cx = configNode["parts"][num]["cx"].as<float> ();
 					product.Cy = configNode["parts"][num]["cy"].as<float> ();
 					product.tag = tag++;
+          std::cout<<"    -"<<configNode["parts"][num]["part"]<<"\n";
 
                     // Push the data of respective product and part to "Fetch" vector
 					Fetch.push_back(product);
@@ -213,10 +215,12 @@ class Order_optimizer: public rclcpp::Node
 		for (size_t i = 0; i < Fetch.size(); i++)
 		{
 
+      std::cout<<"The distances from source to "<<"\n";
 			// Calculate minimum distances for every step
             for (size_t j = 0; j < Fetch.size(); j++)
 			{
 				float x1 = source_cx, y1 = source_cy, x2 = Fetch[j].Cx, y2 = Fetch[j].Cy;
+        
 				if ((visited[j] == true))
 				{
 					distance[j] = MAX;
@@ -225,6 +229,7 @@ class Order_optimizer: public rclcpp::Node
 				{
 					distance[j] = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 				}
+        std::cout<<"  -"<<Fetch[j].partName<<" is "<<distance[j]<<"\n";
 			}
 			float min = distance[0];
 			for (size_t k = 0; k < Fetch.size(); k++)
@@ -235,16 +240,20 @@ class Order_optimizer: public rclcpp::Node
 					min_Index = k;
 				}
 			}
-
+      std::cout<<"The part with shortest distance from here is "<<Fetch[min_Index].partName<<"\n";
+      
 			visited[min_Index] = true;
 			source_cx = Fetch[min_Index].Cx;
 			source_cy = Fetch[min_Index].Cy;
+      std::cout<<"New source moved to the location of "<<Fetch[min_Index].partName<<"=>"
+      <<source_cx<<","<<source_cy<< "\n"<<"\n";
 
             // push the data of minimum distances and corresponding part data
 			Path.push_back(min_Index);
 		}
 
         //printing the shortest path data
+    std::cout<<"Fetching parts"<<"\n";
 		std::cout << "--------------------------------------------------------" << '\n';
 		std::cout << "Working on Order " << orderId << "(" << order_description << ")" << '\n';
 		int tag = 1;
@@ -298,9 +307,10 @@ class Order_optimizer: public rclcpp::Node
 			marker.scale.z = 50.0;
 			marker.text = Fetch[i].partName;
 			markerArray.markers.push_back(marker);
+      std::cout<<"Sending marker for "<<Fetch[i].partName<<" to the topic "<<"\n";
 
-            // Marker for AMR
 			marker.header.frame_id = "/frame";
+
 			marker.header.stamp.sec = RCL_NS_TO_S(time_now);
 			marker.header.stamp.nanosec = time_now;
 			marker.lifetime = rclcpp::Duration(100000000000);
@@ -322,6 +332,9 @@ class Order_optimizer: public rclcpp::Node
 			marker.scale.x = 100.0;
 			marker.scale.y = 100.0;
 			marker.scale.z = 100.0;
+		
+
+            // push the markers to marker array and publish marker array
 			markerArray.markers.push_back(marker);
 
 			publishe_array->publish(markerArray);
@@ -338,13 +351,13 @@ class Order_optimizer: public rclcpp::Node
 int main(int argc, char *argv[])
 {
 	rclcpp::init(argc, argv);
-	std::shared_ptr<Order_optimizer> node(std::make_shared<Order_optimizer> ());
-	while (rclcpp::ok())
-	{
+	std::shared_ptr<Unit_test> node(std::make_shared<Unit_test> ());
+	//while (rclcpp::ok())
+	//{
 		rclcpp::spin_some(node);
 		if (orderId != 0)
 			node->parse(orderId);
-	}
+	//}
 	rclcpp::shutdown();
 	return 0;
 }
